@@ -1,0 +1,17 @@
+# PR {{.PR.ID}} from bitbucket
+
+Upstream URL: <{{.PR.Links.HTML.Href}}>
+
+> Migrated at {{.Now}}
+
+- ID: {{.PR.ID}}
+- Title: {{.PR.Title}}
+- State: {{.PR.State}}
+- Opened by {{.PR.Author.DisplayName}}
+- Merge from `{{.PR.Source.Branch.Name}}` to `{{.PR.Destination.Branch.Name}}`
+
+---
+
+{{.PR.Rendered.Description.Raw}}
+
+{{/* vim: set ft=markdown: */}}
