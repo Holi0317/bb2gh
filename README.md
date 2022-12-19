@@ -25,13 +25,49 @@ meet your requirement.
 
 ## Usage
 
-Download go compiler. I didn't setup github action to compile binary on push.
-
 > :warning: Tell everyone to turn off their notification on the migration repo on Github.
 
-Run following commands:
+1. Create a new repository
+2. Add `BITBUCKET_USER` and `BITBUCKET_PASSWORD` to the repository secret
+3. On a new branch, create github workflow config (attached below)
+4. Trigger `reserve` job multiple times until it succeed
+5. Trigger `migrate`. Probably batch the jobs per 80-100 PR
 
-```bash
+We are doing this weird hack so that we can issue a new github token easily and avoid
+github's rate limit. If we hit rate limit, we just start a new job with a new github
+token.
+
+```yaml
+# .github/workflows/reserve.yml
+name: Reserve
+
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: "Target issue number to get to"
+        required: true
+        type: string
+      github-repository:
+        description: "Github repository to work with"
+        required: true
+        type: string
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Download binary"
+        # Plz update this link to the latest release
+        run: "curl -L -o bb2gh https://github.com/Holi0317/bb2gh/releases/download/v1.1.0/bb2gh && chmod +x bb2gh"
+
+      - name: Run
+        run: "./bb2gh reserve --github-token ${{ github.token }} --to ${{ inputs.to }} --github-repository ${{ inputs.github-repository }}"
+
 export GITHUB_TOKEN=<GITHUB_TOKEN>
 export BITBUCKET_USER=<BB_USER>
 export BITBUCKET_PASSWORD=<BB_PASSWORD>
@@ -43,19 +79,50 @@ go run ./main.go reserve --to 2000 --github-repository octo-org/bb2gh-test
 # Run this command to start migrate the pr content to the issue
 # Note on the `{1..2000}`, which means expand 1-2000 numbers on bash. You can run a single PR migration base on the argument.
 go run ./main.go migrate --github-repository octo-org/bb2gh-test --bitbucket-repository octo-old-org/bb2gh-test {1..2000}
+
 ```
 
-You can replace `go run` with compiled binary, which will be useful if you throw this
-thing to a cloud vm.
+```yaml
+# .github/workflows/migrate.yml
 
-There will be a log file written to `bb2gh.log`. Check for warning messages to see which
-migration failed and rerun it if needed.
+name: Migrate
 
-### Generate Github token
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Target PR number to get from"
+        required: true
+        type: string
+      to:
+        description: "Target PR number to get to"
+        required: true
+        type: string
+      github-repository:
+        description: "Github repository to work with"
+        required: true
+        type: string
+      bitbucket-repository:
+        description: "Bitbucket repository to work with"
+        required: true
+        type: string
 
-Github Settings -> Developers settings -> Personal access token -> Generate new token
+permissions:
+  issues: write
+  pull-requests: read
 
-You will need to grant permission on all repo scope.
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Download binary"
+        # Plz update this link to the latest release
+        run: "curl -L -o bb2gh https://github.com/Holi0317/bb2gh/releases/download/v1.1.0/bb2gh && chmod +x bb2gh"
+
+      - name: Run
+        shell: bash
+        run: "./bb2gh migrate --github-token ${{ github.token }} --github-repository ${{ inputs.github-repository }} --bitbucket-repository ${{ inputs.bitbucket-repository }} {${{ inputs.from }}..${{ inputs.to }}}"
+```
 
 ### Generate Bitbucket token
 
