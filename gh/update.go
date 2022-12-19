@@ -3,14 +3,12 @@ package gh
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/google/go-github/v48/github"
 	"github.com/holi0317/bb2gh/bb"
-	"github.com/sirupsen/logrus"
 )
 
 //go:embed issue.md.tmpl
@@ -52,25 +50,10 @@ func (c *Client) UpdateIssue(ctx context.Context, number int, source *bb.PullReq
 		Body:  github.String(sb.String()),
 	}
 
-	for i := 0; i < retry; i++ {
-		log := logrus.WithFields(logrus.Fields{
-			"retry":  i,
-			"number": number,
-		})
-
-		_, _, err = client.Issues.Edit(ctx, c.owner, c.repo, number, issueReq)
-		if sleep, ok := isRateLimit(err); ok {
-			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
-			time.Sleep(sleep)
-			continue
-		}
-
-		if err != nil {
-			return err
-		}
-
-		return nil
+	_, _, err = client.Issues.Edit(ctx, c.owner, c.repo, number, issueReq)
+	if err != nil {
+		return err
 	}
 
-	return errors.New("Rate limit (UpdateIssue)")
+	return nil
 }

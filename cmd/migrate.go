@@ -34,7 +34,7 @@ func singleMigrate(ctx context.Context, g *gh.Client, b *bb.Client, number int) 
 
 func migrate(ctx context.Context, g *gh.Client, b *bb.Client, numbers []int) error {
 	group, ctx := errgroup.WithContext(ctx)
-	group.SetLimit(10)
+	group.SetLimit(5)
 
 	for _, num := range numbers {
 		num := num

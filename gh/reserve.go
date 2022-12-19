@@ -2,8 +2,6 @@ package gh
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/google/go-github/v48/github"
 	"github.com/sirupsen/logrus"
@@ -68,24 +66,12 @@ func (c *Client) CreateIssue(ctx context.Context) (*github.Issue, error) {
 		Labels: &[]string{"bb2gh"},
 	}
 
-	for i := 0; i < retry; i++ {
-		log := logrus.WithField("retry", i)
-
-		issue, _, err := client.Issues.Create(ctx, c.owner, c.repo, issueReq)
-		if sleep, ok := isRateLimit(err); ok {
-			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
-			time.Sleep(sleep)
-			continue
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		return issue, nil
+	issue, _, err := client.Issues.Create(ctx, c.owner, c.repo, issueReq)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("Rate limit, (CreateIssue)")
+	return issue, nil
 }
 
 func (c *Client) CloseIssue(ctx context.Context, issue *github.Issue) error {
@@ -99,21 +85,11 @@ func (c *Client) CloseIssue(ctx context.Context, issue *github.Issue) error {
 		StateReason: github.String("completed"),
 	}
 
-	for i := 0; i < retry; i++ {
-		_, _, err := client.Issues.Edit(ctx, c.owner, c.repo, issue.GetNumber(), updateReq)
-		if sleep, ok := isRateLimit(err); ok {
-			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
-			time.Sleep(sleep)
-			continue
-		}
+	_, _, err := client.Issues.Edit(ctx, c.owner, c.repo, issue.GetNumber(), updateReq)
 
-		if err != nil {
-			return err
-		}
-
-		log.Info("Created issue placeholder")
-		return nil
+	if err != nil {
+		return err
 	}
 
-	return errors.New("Rate limit (Create Issue)")
+	return nil
 }
