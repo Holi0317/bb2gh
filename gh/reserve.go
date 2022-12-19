@@ -67,8 +67,7 @@ func (c *Client) CreateIssue() (*github.Issue, error) {
 		log := logrus.WithField("retry", i)
 
 		issue, _, err := c.ghc.Issues.Create(c.ctx, c.owner, c.repo, issueReq)
-		if isRateLimit(err) {
-			sleep := sleepTime(i)
+		if sleep, ok := isRateLimit(err); ok {
 			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
 			time.Sleep(sleep)
 			continue
@@ -95,8 +94,7 @@ func (c *Client) CloseIssue(issue *github.Issue) error {
 
 	for i := 0; i < retry; i++ {
 		_, _, err := c.ghc.Issues.Edit(c.ctx, c.owner, c.repo, issue.GetNumber(), updateReq)
-		if isRateLimit(err) {
-			sleep := sleepTime(i)
+		if sleep, ok := isRateLimit(err); ok {
 			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
 			time.Sleep(sleep)
 			continue
