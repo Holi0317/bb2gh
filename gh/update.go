@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"strings"
@@ -32,7 +33,9 @@ type templateInput struct {
 	Author string
 }
 
-func (c *Client) UpdateIssue(number int, source *bb.PullRequest) error {
+func (c *Client) UpdateIssue(ctx context.Context, number int, source *bb.PullRequest) error {
+	client := c.get(ctx)
+
 	input := templateInput{
 		PR:  *source,
 		Now: time.Now().UTC().Format("2006-01-02T15:04:05.999Z"),
@@ -55,7 +58,7 @@ func (c *Client) UpdateIssue(number int, source *bb.PullRequest) error {
 			"number": number,
 		})
 
-		_, _, err = c.ghc.Issues.Edit(c.ctx, c.owner, c.repo, number, issueReq)
+		_, _, err = client.Issues.Edit(ctx, c.owner, c.repo, number, issueReq)
 		if sleep, ok := isRateLimit(err); ok {
 			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
 			time.Sleep(sleep)

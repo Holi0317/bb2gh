@@ -10,12 +10,12 @@ import (
 )
 
 func reserve(ctx context.Context, g *gh.Client, to int) error {
-	err := g.PrepareLabel()
+	err := g.PrepareLabel(ctx)
 	if err != nil {
 		return err
 	}
 
-	issueNum, err := g.GetMaxIssueNumber()
+	issueNum, err := g.GetMaxIssueNumber(ctx)
 	if err != nil {
 		return err
 	}
@@ -28,17 +28,17 @@ func reserve(ctx context.Context, g *gh.Client, to int) error {
 		return nil
 	}
 
-	group, _ := errgroup.WithContext(ctx)
+	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(10)
 
 	for i := issueNum + 1; i <= to; i++ {
 		group.Go(func() error {
-			issue, err := g.CreateIssue()
+			issue, err := g.CreateIssue(ctx)
 			if err != nil {
 				return err
 			}
 
-			err = g.CloseIssue(issue)
+			err = g.CloseIssue(ctx, issue)
 			if err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ func reserveCmd() *cli.Command {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
-			g, err := gh.New(cCtx.Context, flagGithubToken, flagGithubRepo)
+			g, err := gh.New(flagGithubToken, flagGithubRepo)
 			if err != nil {
 				return err
 			}

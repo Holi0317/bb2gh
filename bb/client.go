@@ -15,7 +15,6 @@ func (e *PullRequestNotFound) Error() string {
 }
 
 type Client struct {
-	ctx    context.Context
 	client http.Client
 
 	user     string
@@ -25,14 +24,13 @@ type Client struct {
 	reposlug  string
 }
 
-func New(ctx context.Context, user, password, repo string) (*Client, error) {
+func New(user, password, repo string) (*Client, error) {
 	split := strings.Split(repo, "/")
 	if len(split) != 2 {
 		return nil, fmt.Errorf("Is not in correct bitbucket repo format %v", repo)
 	}
 
 	client := &Client{
-		ctx:    ctx,
 		client: http.Client{},
 
 		user:     user,
@@ -45,10 +43,10 @@ func New(ctx context.Context, user, password, repo string) (*Client, error) {
 	return client, nil
 }
 
-func (b *Client) GetPR(prid int) (*PullRequest, error) {
+func (b *Client) GetPR(ctx context.Context, prid int) (*PullRequest, error) {
 	url := fmt.Sprintf("https://api.bitbucket.org/2.0/repositories/%s/%s/pullrequests/%d", b.workspace, b.reposlug, prid)
 
-	req, err := http.NewRequestWithContext(b.ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}

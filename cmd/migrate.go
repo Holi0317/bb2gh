@@ -12,17 +12,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func singleMigrate(g *gh.Client, b *bb.Client, number int) error {
+func singleMigrate(ctx context.Context, g *gh.Client, b *bb.Client, number int) error {
 	log := logrus.WithField("number", number)
 
 	log.Info("Migrate PR")
-	src, err := b.GetPR(number)
+	src, err := b.GetPR(ctx, number)
 	if err != nil {
 		return err
 	}
 
 	log.WithField("title", src.Title).Debug("Got PR info from bitbucket. Writing to github")
-	err = g.UpdateIssue(number, src)
+	err = g.UpdateIssue(ctx, number, src)
 	if err != nil {
 		return err
 	}
@@ -33,13 +33,13 @@ func singleMigrate(g *gh.Client, b *bb.Client, number int) error {
 }
 
 func migrate(ctx context.Context, g *gh.Client, b *bb.Client, numbers []int) error {
-	group, _ := errgroup.WithContext(ctx)
+	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(10)
 
 	for _, num := range numbers {
 		num := num
 		group.Go(func() error {
-			err := singleMigrate(g, b, num)
+			err := singleMigrate(ctx, g, b, num)
 			if err != nil {
 				logrus.WithField("num", num).WithError(err).Warn("Failed to migrate issue")
 			}
@@ -114,12 +114,12 @@ func migrateCmd() *cli.Command {
 				numbers[i] = parsed
 			}
 
-			g, err := gh.New(cCtx.Context, flagGithubToken, flagGithubRepo)
+			g, err := gh.New(flagGithubToken, flagGithubRepo)
 			if err != nil {
 				return err
 			}
 
-			b, err := bb.New(cCtx.Context, flagBBUser, flagBBPassword, flagBBRepo)
+			b, err := bb.New(flagBBUser, flagBBPassword, flagBBRepo)
 			if err != nil {
 				return err
 			}

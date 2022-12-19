@@ -10,33 +10,30 @@ import (
 )
 
 type Client struct {
-	ctx context.Context
-
 	token string
 	owner string
 	repo  string
-	ghc   *github.Client
 }
 
-func New(ctx context.Context, token, repository string) (*Client, error) {
+func New(token, repository string) (*Client, error) {
 	s := strings.Split(repository, "/")
 	if len(s) != 2 {
 		return nil, fmt.Errorf("Malformed repository name. %s", repository)
 	}
 
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-	ghc := github.NewClient(tc)
-
 	client := &Client{
-		ctx:   ctx,
 		token: token,
 		owner: s[0],
 		repo:  s[1],
-		ghc:   ghc,
 	}
 
 	return client, nil
+}
+
+func (c *Client) get(ctx context.Context) *github.Client {
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: c.token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	return github.NewClient(tc)
 }

@@ -1,16 +1,19 @@
 package gh
 
 import (
+	"context"
+
 	"github.com/google/go-github/v48/github"
 	"github.com/sirupsen/logrus"
 )
 
-func (c *Client) PrepareLabel() error {
+func (c *Client) PrepareLabel(ctx context.Context) error {
+	client := c.get(ctx)
 	logrus.Info("Getting label on github")
 
-	label, resp, err := c.ghc.Issues.GetLabel(c.ctx, c.owner, c.repo, "bb2gh")
+	label, resp, err := client.Issues.GetLabel(ctx, c.owner, c.repo, "bb2gh")
 	if resp != nil && resp.StatusCode == 404 {
-		return c.createLabel()
+		return c.createLabel(ctx)
 	} else if err != nil {
 		return err
 	}
@@ -20,7 +23,9 @@ func (c *Client) PrepareLabel() error {
 	return nil
 }
 
-func (c *Client) createLabel() error {
+func (c *Client) createLabel(ctx context.Context) error {
+	client := c.get(ctx)
+
 	label := &github.Label{
 		Name:        github.String("bb2gh"),
 		Description: github.String("Issues crated by bb2gh migration tool"),
@@ -28,7 +33,7 @@ func (c *Client) createLabel() error {
 
 	logrus.Info("Creating label bb2gh on github")
 
-	_, _, err := c.ghc.Issues.CreateLabel(c.ctx, c.owner, c.repo, label)
+	_, _, err := client.Issues.CreateLabel(ctx, c.owner, c.repo, label)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -8,7 +9,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (c *Client) GetMaxIssueNumber() (int, error) {
+func (c *Client) GetMaxIssueNumber(ctx context.Context) (int, error) {
+	client := c.get(ctx)
+
 	issueOpts := &github.IssueListByRepoOptions{
 		State:     "all",
 		Sort:      "created",
@@ -17,7 +20,7 @@ func (c *Client) GetMaxIssueNumber() (int, error) {
 			PerPage: 1,
 		},
 	}
-	issues, _, err := c.ghc.Issues.ListByRepo(c.ctx, c.owner, c.repo, issueOpts)
+	issues, _, err := client.Issues.ListByRepo(ctx, c.owner, c.repo, issueOpts)
 	if err != nil {
 		return -1, err
 	}
@@ -35,7 +38,7 @@ func (c *Client) GetMaxIssueNumber() (int, error) {
 			PerPage: 1,
 		},
 	}
-	prs, _, err := c.ghc.PullRequests.List(c.ctx, c.owner, c.repo, prOpts)
+	prs, _, err := client.PullRequests.List(ctx, c.owner, c.repo, prOpts)
 	if err != nil {
 		return -1, err
 	}
@@ -57,7 +60,9 @@ func (c *Client) GetMaxIssueNumber() (int, error) {
 	return maxPr, nil
 }
 
-func (c *Client) CreateIssue() (*github.Issue, error) {
+func (c *Client) CreateIssue(ctx context.Context) (*github.Issue, error) {
+	client := c.get(ctx)
+
 	issueReq := &github.IssueRequest{
 		Title:  github.String("Reserved by bb2gh"),
 		Labels: &[]string{"bb2gh"},
@@ -66,7 +71,7 @@ func (c *Client) CreateIssue() (*github.Issue, error) {
 	for i := 0; i < retry; i++ {
 		log := logrus.WithField("retry", i)
 
-		issue, _, err := c.ghc.Issues.Create(c.ctx, c.owner, c.repo, issueReq)
+		issue, _, err := client.Issues.Create(ctx, c.owner, c.repo, issueReq)
 		if sleep, ok := isRateLimit(err); ok {
 			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
 			time.Sleep(sleep)
@@ -83,7 +88,9 @@ func (c *Client) CreateIssue() (*github.Issue, error) {
 	return nil, errors.New("Rate limit, (CreateIssue)")
 }
 
-func (c *Client) CloseIssue(issue *github.Issue) error {
+func (c *Client) CloseIssue(ctx context.Context, issue *github.Issue) error {
+	client := c.get(ctx)
+
 	log := logrus.WithField("number", issue.GetNumber())
 	log.Debug("Created issue. Now marking it as closed")
 
@@ -93,7 +100,7 @@ func (c *Client) CloseIssue(issue *github.Issue) error {
 	}
 
 	for i := 0; i < retry; i++ {
-		_, _, err := c.ghc.Issues.Edit(c.ctx, c.owner, c.repo, issue.GetNumber(), updateReq)
+		_, _, err := client.Issues.Edit(ctx, c.owner, c.repo, issue.GetNumber(), updateReq)
 		if sleep, ok := isRateLimit(err); ok {
 			log.WithField("sleep", sleep).Debug("Hit rate limit. Sleeping before retry")
 			time.Sleep(sleep)
