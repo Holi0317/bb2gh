@@ -69,5 +69,5 @@ func (c *Client) UpdateIssue(number int, source *bb.PullRequest) error {
 		return nil
 	}
 
-	return errors.New("Rate limit")
+	return errors.New("Rate limit (UpdateIssue)")
 }

@@ -80,7 +80,7 @@ func (c *Client) CreateIssue() (*github.Issue, error) {
 		return issue, nil
 	}
 
-	return nil, errors.New("Rate limit")
+	return nil, errors.New("Rate limit, (CreateIssue)")
 }
 
 func (c *Client) CloseIssue(issue *github.Issue) error {
@@ -108,5 +108,5 @@ func (c *Client) CloseIssue(issue *github.Issue) error {
 		return nil
 	}
 
-	return errors.New("Rate limit")
+	return errors.New("Rate limit (Create Issue)")
 }
