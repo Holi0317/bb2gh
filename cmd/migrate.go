@@ -42,6 +42,7 @@ func migrate(ctx context.Context, g *gh.Client, b *bb.Client, numbers []int) err
 			err := singleMigrate(ctx, g, b, num)
 			if err != nil {
 				logrus.WithField("num", num).WithError(err).Warn("Failed to migrate issue")
+				return err
 			}
 
 			return nil
