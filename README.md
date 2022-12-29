@@ -37,6 +37,8 @@ We are doing this weird hack so that we can issue a new github token easily and 
 github's rate limit. If we hit rate limit, we just start a new job with a new github
 token.
 
+(Remember to change the release number in the workflow files)
+
 ```yaml
 # .github/workflows/reserve.yml
 name: Reserve
@@ -62,24 +64,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Download binary"
-        # Plz update this link to the latest release
         run: "curl -L -o bb2gh https://github.com/Holi0317/bb2gh/releases/download/v1.1.0/bb2gh && chmod +x bb2gh"
 
       - name: Run
         run: "./bb2gh reserve --github-token ${{ github.token }} --to ${{ inputs.to }} --github-repository ${{ inputs.github-repository }}"
-
-export GITHUB_TOKEN=<GITHUB_TOKEN>
-export BITBUCKET_USER=<BB_USER>
-export BITBUCKET_PASSWORD=<BB_PASSWORD>
-# Let's say max bitbucket PR number is #1600. So we want to reserve github issue up to 2000
-# Throw this to a VM and let it run overnight. Github got some serious rate limit in place (which make sense).
-go run ./main.go reserve --to 2000 --github-repository octo-org/bb2gh-test
-
-# After reserving, technically developers can start making PR as the issue number has been bumped.
-# Run this command to start migrate the pr content to the issue
-# Note on the `{1..2000}`, which means expand 1-2000 numbers on bash. You can run a single PR migration base on the argument.
-go run ./main.go migrate --github-repository octo-org/bb2gh-test --bitbucket-repository octo-old-org/bb2gh-test {1..2000}
-
 ```
 
 ```yaml
@@ -121,10 +109,45 @@ jobs:
 
       - name: Run
         shell: bash
-        run: "./bb2gh migrate --github-token ${{ github.token }} --github-repository ${{ inputs.github-repository }} --bitbucket-repository ${{ inputs.bitbucket-repository }} {${{ inputs.from }}..${{ inputs.to }}}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BITBUCKET_USER: ${{ secrets.BITBUCKET_USER }}
+          BITBUCKET_PASSWORD: ${{ secrets.BITBUCKET_PASSWORD }}
+        run: "./bb2gh migrate --github-repository ${{ inputs.github-repository }} --bitbucket-repository ${{ inputs.bitbucket-repository }} {${{ inputs.from }}..${{ inputs.to }}}"
 ```
 
 ### Generate Bitbucket token
 
 Generate a app token (I forgot where to get that one). Just make sure you are using your
 bitbucket username (not your atlassian email!) when passing the argument.
+
+### Driver shell script template
+
+```bash
+#!/bin/bash
+
+bbrepo=bb-repo/repo
+repo=octo-org/repo
+
+batch_size=50
+to=4000
+
+# For reserve
+for i in {1..20}; do
+	gh workflow -R "$repo" run Reserve -f to=${to} -f "github-repository=${repo}"
+	sleep 40
+done
+
+for i in {1..20}; do
+	low=$(((i - 1) * batch_size + 1))
+	up=$((i * batch_size))
+
+	echo "Processing from ${low} to ${up}"
+
+	gh workflow -R "$repo" run Migrate -f from=$low -f to=$up -f "github-repository=${repo}" -f "bitbucket-repository=${bbrepo}"
+	sleep 60
+done
+
+# Show the date for prepare next run
+date
+```
